@@ -2,4 +2,4 @@
 2) Activate python environment --> "virtualenv/Scripts/activate.ps1"
 3) Select python interpretor
 4) Install the dependencies --> "pip install -r requirements.txt"
-5) Run main.py 
+5) Run main.py 
