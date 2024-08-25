@@ -1,4 +1,4 @@
-# live_transcription.py
+# speech-to-text
 import asyncio
 from deepgram import (
     DeepgramClient,
