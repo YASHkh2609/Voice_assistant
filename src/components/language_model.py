@@ -5,6 +5,10 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_groq import ChatGroq
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import LLMChain
+from langchain.chains import create_retrieval_chain
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain_core.prompts import MessagesPlaceholder
+from langchain.chains import create_history_aware_retriever
 from langchain_core.output_parsers import StrOutputParser
 from langchain.prompts import (
     ChatPromptTemplate,
@@ -33,24 +37,65 @@ class LanguageModelProcessor:
         with open('system_prompt.txt', 'r') as file:
             system_prompt = file.read().strip()
         
+        system_prompt = system_prompt+ "{context}"
         # self.prompt = ChatPromptTemplate.from_messages([
         #     SystemMessagePromptTemplate.from_template(system_prompt),
         #     HumanMessagePromptTemplate.from_template("{text}")
         # ])
 
-        self.prompt = ChatPromptTemplate.from_template(system_prompt)
+        # self.prompt = ChatPromptTemplate.from_template(system_prompt)
+        # self.prompt = ChatPromptTemplate.from_messages(
+        #     [
+        #         ("system", system_prompt),
+        #         ("human", "{input}"),
+        #     ]
+        # )
+        self.retriever = self.db.as_retriever()
 
-        self.conversation = LLMChain(
-            llm=self.llm,
-            prompt=self.prompt,
-            memory=self.memory
+        contextualize_q_system_prompt = (
+            "Given a chat history and the latest user question "
+            "which might reference context in the chat history, "
+            "formulate a standalone question which can be understood "
+            "without the chat history. Do NOT answer the question, "
+            "just reformulate it if needed and otherwise return it as is."
         )
+
+        self.contextualize_q_prompt = ChatPromptTemplate.from_messages(
+            [
+                ("system", contextualize_q_system_prompt),
+                MessagesPlaceholder("chat_history"),
+                ("human", "{input}"),
+            ]
+        )
+        self.history_aware_retriever = create_history_aware_retriever(
+            self.llm, self.retriever, self.contextualize_q_prompt
+        )
+        self.qa_prompt = ChatPromptTemplate.from_messages(
+            [
+                ("system", system_prompt),
+                MessagesPlaceholder("chat_history"),
+                ("human", "{input}"),
+            ]
+        )
+        self.question_answer_chain = create_stuff_documents_chain(self.llm, self.qa_prompt)
+
+        self.rag_chain = create_retrieval_chain(self.history_aware_retriever, self.question_answer_chain)
+        # self.conversation = LLMChain(
+        #     llm=self.llm,
+        #     prompt=self.prompt,
+        #     memory=self.memory
+        # )
         
-        self.chain =(RunnablePassthrough.assign(context = lambda input: self.format_docs(input["context"]))
-                |self.conversation
-                |StrOutputParser()
-                )
-        # self.retriever = self.db.as_retriever()
+        # self.chain =(RunnablePassthrough.assign(context = lambda input: self.format_docs(input["context"]))
+        #         |self.conversation
+        #         |StrOutputParser()
+        #         )
+        
+
+        # self.question_answer_chain = create_stuff_documents_chain(self.conversation, self.prompt)
+
+        # self.rag_chain = create_retrieval_chain(self.retriever, self.question_answer_chain)
+
         # self.rag_chain =( 
         #                 {"context": self.retriever | self.format_docs, "text": RunnablePassthrough()} 
         #                  | self.conversation
@@ -60,7 +105,7 @@ class LanguageModelProcessor:
     def process(self, text):
         self.memory.chat_memory.add_user_message(text)
         start_time = time.time()
-
+        chat_history=[]
         # rag_response = self.db.similarity_search_by_vector_with_relevance_scores(
         #     embedding=self.embeddings.embed_query(text), k=2
         # )
@@ -68,26 +113,27 @@ class LanguageModelProcessor:
         # rag_response_text = "\n".join([doc[0].page_content for doc in rag_response])
         # combined_text = f"User input: {text}\nDatabase response: {rag_response_text}"
 
-        docs = self.db.similarity_search(text)
-        self.chain.invoke({"context":docs, "question":text})
+        # docs = self.db.similarity_search(text)
+        # self.chain.invoke({"context":docs, "question":text})
+        response = self.rag_chain.invoke({"input":text, "chat_history":chat_history})
 
         end_time = time.time()
-        self.memory.chat_memory.add_ai_message(response['text'])
+        self.memory.chat_memory.add_ai_message(response['answer'])
         elapsed_time = int((end_time - start_time) * 1000)
-        return response['text'], elapsed_time
+        return response['answer'], elapsed_time
 
 # Testing the above class:
-if __name__ == "__main__":
-    processor = LanguageModelProcessor()
+# if __name__ == "__main__":
+#     processor = LanguageModelProcessor()
 
-    # Define a test input
-    test_input = "Suggest me a t-shirt."
+#     # Define a test input
+#     test_input = "what is its price?"
 
-    response, elapsed_time = processor.process(test_input)
+#     response, elapsed_time = processor.process(test_input)
 
-    # Print the response and elapsed time
-    print(f"Response: {response}")
-    print(f"Elapsed time: {elapsed_time} ms")
+#     # Print the response and elapsed time
+#     print(f"Response: {response}")
+#     print(f"Elapsed time: {elapsed_time} ms")
 
 # # language_model.py
 # import time
