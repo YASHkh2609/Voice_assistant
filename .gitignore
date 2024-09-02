@@ -1,3 +1,4 @@
 .env
 voice_assistant
 __pycache__/
+chromadb_langchain

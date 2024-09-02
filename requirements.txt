@@ -33,7 +33,7 @@ jupyter_client==8.6.0
 jupyter_core==5.7.1
 langchain==0.1.9
 langchain-community==0.0.24
-langchain-core==0.1.26
+langchain-core==0.1.40
 langchain-groq==0.0.1
 langchain-openai==0.0.7
 langsmith==0.1.6
@@ -87,3 +87,7 @@ yarl==1.9.4
 zope.event==5.0
 zope.interface==6.2
 streamlit
+langchain-chroma==0.1.2
+chromadb
+
+
