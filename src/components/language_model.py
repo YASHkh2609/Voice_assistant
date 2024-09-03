@@ -32,7 +32,7 @@ class LanguageModelProcessor:
         self.embeddings = HuggingFaceInferenceAPIEmbeddings(
             api_key=os.getenv("INFERENCE_API_KEY"), model_name="sentence-transformers/all-MiniLM-l6-v2"
         )
-        self.db = Chroma(collection_name="product_collection", persist_directory="E:/JK Voice Assistant/chromadb_langchain", embedding_function=self.embeddings)
+        self.db = Chroma(collection_name="product_collection", persist_directory="E:\JK Voice Assistant\chromadb_langchain", embedding_function=self.embeddings)
 
         with open('system_prompt.txt', 'r') as file:
             system_prompt = file.read().strip()
@@ -123,17 +123,17 @@ class LanguageModelProcessor:
         return response['answer'], elapsed_time
 
 # Testing the above class:
-# if __name__ == "__main__":
-#     processor = LanguageModelProcessor()
+if __name__ == "__main__":
+    processor = LanguageModelProcessor()
 
-#     # Define a test input
-#     test_input = "what is its price?"
+    # Define a test input
+    test_input = "tell me about the collection of products you have"
 
-#     response, elapsed_time = processor.process(test_input)
+    response, elapsed_time = processor.process(test_input)
 
-#     # Print the response and elapsed time
-#     print(f"Response: {response}")
-#     print(f"Elapsed time: {elapsed_time} ms")
+    # Print the response and elapsed time
+    print(f"Response: {response}")
+    print(f"Elapsed time: {elapsed_time} ms")
 
 # # language_model.py
 # import time
